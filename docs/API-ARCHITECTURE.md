@@ -8,8 +8,8 @@ Dashboard
    ▼
 API Gateway / Go API
    ├─ Auth & RBAC
-   ├─ Organization / Members
-   ├─ Marketplace Accounts
+   ├─ Company Settings / Users
+   ├─ Platform Accounts
    ├─ Catalog & Orders
    ├─ Ads & Promotions
    ├─ Profitability Engine
@@ -20,7 +20,7 @@ API Gateway / Go API
         ├─ Redis       ── cache, lock, rate limit, job queue
         └─ Workers     ── sync, calculate, recommend, digest
                          │
-                         └─ Marketplace adapters
+                         └─ Platform adapters
 ```
 
 ## 2. 基础约定
@@ -34,7 +34,7 @@ API Gateway / Go API
 - 每个请求带 `X-Request-ID`，日志不记录 token/cookie/password
 - 所有外部平台调用经过 adapter，业务层不直接拼平台 API
 
-## 3. 认证与组织
+## 3. 认证与公司内部用户
 
 ```text
 POST   /auth/register
@@ -42,30 +42,32 @@ POST   /auth/login
 POST   /auth/refresh
 POST   /auth/logout
 GET    /me
-GET    /organizations
-POST   /organizations
-GET    /organizations/{organizationId}/members
-POST   /organizations/{organizationId}/members/invitations
-PATCH  /organizations/{organizationId}/members/{memberId}
+GET    /company
+PATCH  /company
+GET    /users
+POST   /users
+PATCH  /users/{userId}
 ```
 
-权限在 middleware 中解析，handler 仍必须使用 organization-scoped service。
+系统只服务一家公司，不创建组织和租户上下文。权限在 middleware 中解析，handler 仍必须通过 role-aware service 检查内部用户和目标账户权限。
 
-## 4. Marketplace 与同步
+## 4. 平台账户与同步
 
 ```text
-GET    /marketplace-providers
-GET    /marketplace-accounts
-POST   /marketplace-accounts/{platform}/authorize
-GET    /marketplace-accounts/{accountId}/oauth/callback
-POST   /marketplace-accounts/{accountId}/disconnect
-GET    /marketplace-accounts/{accountId}/sync-runs
-POST   /marketplace-accounts/{accountId}/sync-runs
+GET    /platform-providers
+GET    /platform-accounts
+POST   /platform-accounts/{platform}/authorize
+GET    /platform-accounts/{accountId}/oauth/callback
+POST   /platform-accounts/{accountId}/disconnect
+GET    /platform-accounts/{accountId}/sync-runs
+POST   /platform-accounts/{accountId}/sync-runs
 GET    /sync-runs/{syncRunId}
 POST   /sync-runs/{syncRunId}/retry
 ```
 
-同步 API 只创建任务并立即返回，不在 HTTP 请求内拉取 90 天数据。worker 使用锁和 idempotency key 防止重复同步。
+同步 API 只创建任务并立即返回，不在 HTTP 请求内拉取 90 天数据。worker 使用锁和 idempotency key 防止重复同步。V1 平台范围为 Mercado Livre、Shopee、TikTok Ads，不包含 Amazon。
+
+TikTok Ads 使用 TikTok for Business Marketing API 的 advertiser account。campaign/ad group/ad 查询和报表任务使用独立 adapter；TikTok Shop 的商品/订单接口不复用 TikTok Ads adapter。
 
 ## 5. Dashboard 与利润
 
@@ -133,7 +135,7 @@ daily_digest.generate.requested
 
 worker 规则：
 
-1. 每个 job 带 organization/account scope。
+1. 每个 job 带 platform account scope。
 2. 失败记录 error code 和可操作的 remediation。
 3. 外部 API 使用平台级 rate limit 和退避。
 4. 任务结果可重放，写入 `sync_jobs` / `action_runs`。
@@ -141,19 +143,31 @@ worker 规则：
 ## 9. Adapter 接口
 
 ```go
-type MarketplaceAdapter interface {
+type CommerceAdapter interface {
     Provider() string
     AuthorizeURL(ctx context.Context, state OAuthState) (string, error)
     ExchangeToken(ctx context.Context, code string) (Credential, error)
     SyncCatalog(ctx context.Context, account Account, cursor string) (CatalogPage, error)
     SyncOrders(ctx context.Context, account Account, window TimeWindow, cursor string) (OrderPage, error)
-    SyncAds(ctx context.Context, account Account, window TimeWindow, cursor string) (AdsPage, error)
     SyncPromotions(ctx context.Context, account Account, window TimeWindow, cursor string) (PromotionPage, error)
+    ExecuteAction(ctx context.Context, action ApprovedAction) (ActionResult, error)
+}
+
+type AdsAdapter interface {
+    Provider() string
+    AuthorizeURL(ctx context.Context, state OAuthState) (string, error)
+    ExchangeToken(ctx context.Context, code string) (Credential, error)
+    SyncCampaigns(ctx context.Context, account Account, cursor string) (CampaignPage, error)
+    SyncAdGroups(ctx context.Context, account Account, cursor string) (AdGroupPage, error)
+    SyncAds(ctx context.Context, account Account, cursor string) (AdsPage, error)
+    SyncMetrics(ctx context.Context, account Account, window TimeWindow) (MetricsPage, error)
+    CreateReportTask(ctx context.Context, account Account, query ReportQuery) (ReportTask, error)
+    GetReportTask(ctx context.Context, account Account, taskID string) (ReportTask, error)
     ExecuteAction(ctx context.Context, action ApprovedAction) (ActionResult, error)
 }
 ```
 
-第一阶段可将 `ExecuteAction` 实现为拒绝/feature flag disabled，从架构上预留但不开放危险写操作。
+Mercado Livre/Shopee 可同时实现 `CommerceAdapter` 和 `AdsAdapter`；TikTok Ads V1 只实现 `AdsAdapter`。第一阶段可将 `ExecuteAction` 实现为拒绝/feature flag disabled，从架构上预留但不开放危险写操作。
 
 ## 10. 观测与安全
 

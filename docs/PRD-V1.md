@@ -6,22 +6,22 @@
 
 ## 1. 产品定位
 
-HAMI Ads 是面向跨平台电商卖家的 profit-first 广告运营 SaaS。它把 marketplace 广告、订单、商品成本、平台费、运费、促销和库存放在同一个业务模型中，回答三个问题：
+HAMI Ads 是供 HAMI 公司内部使用的 profit-first 广告运营系统。它把 Mercado Livre、Shopee 和 TikTok Ads 的广告、订单、商品成本、平台费、运费、促销和库存放在同一个业务模型中，回答三个问题：
 
 1. 哪些广告真正赚钱？
 2. 哪些 SKU 正在消耗预算但没有贡献利润？
 3. 下一步应该暂停、扩量、调预算，还是先修正成本/价格？
 
-AdMan 公开页面强调的能力包括统一连接 Mercado Livre、Amazon、Shopee 与 ERP，持续计算 SKU 真实利润，分析 ACOS/TACOS/ROAS，管理广告/促销/目录，并由 Amanda 提供建议和受控执行。本 PRD 将这些公开能力重新定义为 HAMI Ads 的独立 V1 范围。
+AdMan 公开页面强调的能力包括连接 Mercado Livre、Amazon、Shopee 与 ERP，持续计算 SKU 真实利润，分析 ACOS/TACOS/ROAS，管理广告/促销/目录，并由 Amanda 提供建议和受控执行。本 PRD 只取其中适合 HAMI 内部运营的方向；HAMI Ads V1 不接入 Amazon，新增 TikTok Ads。
 
 ## 2. 用户与痛点
 
 ### 目标用户
 
-- 多 marketplace 经营的品牌卖家
-- 管理多个店铺的电商运营负责人
-- 为多个客户服务的广告代理商/顾问
-- 需要从“投放指标”转向“投放后净利润”的财务或老板
+- HAMI 内部电商运营负责人
+- 负责多个店铺和广告账户的投放人员
+- 需要从“投放指标”转向“投放后净利润”的管理者
+- 负责成本、库存和经营分析的内部财务/运营人员
 
 ### 核心痛点
 
@@ -35,7 +35,7 @@ AdMan 公开页面强调的能力包括统一连接 Mercado Livre、Amazon、Sho
 
 ### V1 必须达成
 
-- 连接至少一个 marketplace 账户并完成历史数据同步
+- 连接 Mercado Livre、Shopee 或 TikTok Ads 账户，并完成历史数据同步
 - 以 SKU 为粒度展示销售额、广告花费、费用、成本、贡献利润和利润率
 - 展示 campaign/ad/product 的 ACOS、TACOS、ROAS、CTR、CPC、转化率
 - 识别至少四类问题：亏损广告、浪费预算、库存风险、未投放但有潜力的 SKU
@@ -46,7 +46,8 @@ AdMan 公开页面强调的能力包括统一连接 Mercado Livre、Amazon、Sho
 
 - 不在第一阶段实现无审批的自动调价、自动改竞价或自动暂停
 - 不做完整会计总账、发票和支付结算
-- 不承诺覆盖所有 marketplace 的每一个广告类型
+- 不承诺覆盖 TikTok Ads 的每一种广告类型；V1 先覆盖标准 Campaign/Ad Group/Ad 报表
+- 不接入 Amazon；TikTok Shop 商品/订单接口与 TikTok Ads 分开评估，不在 V1 默认范围内
 - 不把 AI 聊天包装成没有数据依据的“万能助手”
 - 不把第三方平台 token、Partner Key 或店铺密码提交到 Git
 
@@ -54,19 +55,26 @@ AdMan 公开页面强调的能力包括统一连接 Mercado Livre、Amazon、Sho
 
 ### P0：第一阶段必须交付
 
-#### 4.1 组织与权限
+#### 4.1 公司内部用户与权限
 
-- 创建组织、成员邀请、角色：Owner、Admin、Analyst、Operator、Viewer
-- 按组织隔离数据
-- 成员只能访问被授权的 marketplace 账户和店铺
+- 单公司部署，不创建组织、不提供租户切换和成员邀请流程
+- 角色：Admin、Analyst、Operator、Viewer
+- 用户只能访问已授权的店铺/广告账户和内部功能
 - 记录登录、授权、审批、同步和平台写操作审计
 
-#### 4.2 Marketplace 连接
+#### 4.2 平台连接
 
-- 连接/断开 Mercado Livre、Amazon、Shopee
+- 连接/断开 Mercado Livre、Shopee、TikTok Ads
 - OAuth 或平台授权流程使用 state、PKCE（平台支持时）和加密 token 引用
 - 记录连接状态、最近同步时间、错误原因和权限范围
 - 第一阶段至少实现一个真实 adapter；其他平台使用相同接口保留扩展位
+
+TikTok Ads V1 连接要求：
+
+- 以 TikTok for Business Marketing API 的 advertiser account 为接入对象
+- 同步 campaign、ad group、ad、预算、状态、花费和标准报表指标
+- 支持同步/异步报表任务状态，不在 API 请求中长时间等待报表生成
+- TikTok Shop 商品、订单和 GMV Max 专属能力单独建 adapter；第一阶段只预留接口，不把 TikTok Shop 当作 TikTok Ads 的普通账户
 
 #### 4.3 数据同步与标准化
 
@@ -78,7 +86,7 @@ AdMan 公开页面强调的能力包括统一连接 Mercado Livre、Amazon、Sho
 #### 4.4 利润驾驶舱
 
 - 总销售额、广告花费、平台费、运费、税费、COGS、贡献利润、贡献利润率
-- 按组织、店铺、平台、商品、SKU、campaign、日期筛选
+- 按店铺、平台、商品、SKU、campaign、日期筛选
 - 真实利润计算必须显示数据新鲜度和缺失成本提示
 - 提供 SKU 贡献利润排序、亏损 SKU、广告花费占比和库存天数
 
@@ -153,7 +161,7 @@ stock_days = available_units / max(avg_daily_units_sold, small_positive_number)
 
 ### 流程 A：首次接入
 
-注册 → 创建组织 → 选择 marketplace → 授权 → 校验权限 → 同步 90 天数据 → 成本配置 → 数据质量检查 → 进入 Dashboard。
+管理员登录 → 选择平台账户 → 授权 → 校验权限 → 同步 90 天数据 → 成本配置 → 数据质量检查 → 进入 Dashboard。
 
 ### 流程 B：发现亏损广告
 
@@ -165,19 +173,19 @@ Dashboard → 广告浪费卡片 → campaign 明细 → SKU 利润拆解 → �
 
 ## 7. 非功能要求
 
-- 多租户查询必须带组织过滤；关键表预留 RLS policy
+- 单公司系统仍必须在服务层执行角色和账户权限校验
 - API 默认超时、限流、分页和幂等键
 - 外部平台失败不应阻塞 Dashboard 读取已有数据
 - 同步失败需在 5 分钟内可见，并提供重试入口
 - 金额用 decimal/numeric，不用浮点数持久化
-- 所有时刻存 UTC，展示时按组织时区转换
+- 所有时刻存 UTC，展示时按公司配置的时区转换
 - API secret 不进入日志、错误响应、截图或仓库
 - 建议生成过程可回放，保留输入数据版本和计算版本
 
 ## 8. V1 验收标准
 
-1. 新组织在没有平台数据时能完成 onboarding，并看到空状态和连接引导。
-2. 至少一个 marketplace 连接成功后，90 天数据在后台任务中完成同步。
+1. 内部管理员在没有平台数据时能完成首次配置，并看到空状态和连接引导。
+2. 至少一个 Mercado Livre、Shopee 或 TikTok Ads 账户连接成功后，90 天数据在后台任务中完成同步。
 3. 同一个 SKU 的收入、成本、广告费和利润可以钻取到明细来源。
 4. Dashboard 的 ACOS/TACOS/ROAS 与测试 fixture 计算结果一致。
 5. 任何建议都能回答“为什么建议、依据是什么、会影响什么”。

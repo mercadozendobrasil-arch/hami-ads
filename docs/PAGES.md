@@ -7,8 +7,8 @@
 ├─ login
 ├─ register
 ├─ onboarding
-│  ├─ organization
-│  ├─ connect-marketplace
+│  ├─ company-settings
+│  ├─ connect-platform
 │  ├─ import-data
 │  ├─ cost-setup
 │  └─ data-quality
@@ -42,8 +42,8 @@
 │  ├─ rules/new
 │  └─ action-runs
 ├─ settings
-│  ├─ organization
-│  ├─ members
+│  ├─ company
+│  ├─ users-roles
 │  ├─ roles
 │  ├─ costs
 │  ├─ notifications
@@ -72,7 +72,7 @@
 
 ### Integrations
 
-以卡片显示平台连接状态、权限、最后同步、同步错误和重试入口。连接凭据只在平台授权弹窗中处理，HAMI 页面不显示 token。
+以卡片显示 Mercado Livre、Shopee、TikTok Ads 的连接状态、权限、最后同步、同步错误和重试入口。连接凭据只在平台授权弹窗中处理，HAMI 页面不显示 token。TikTok Ads 显示 advertiser account；TikTok Shop 若未来接入，必须单独显示为另一种连接类型。
 
 ### Catalog / SKU Detail
 
@@ -80,7 +80,7 @@
 
 ### Settings
 
-组织、成员、角色、成本配置、时区、币种、通知和审计日志。
+公司配置、内部用户、角色、成本配置、时区、币种、通知和审计日志。
 
 ## 3. 通用交互状态
 
@@ -88,13 +88,13 @@
 
 ## 4. 导航与权限
 
-| 页面域 | Viewer | Analyst | Operator | Admin/Owner |
+| 页面域 | Viewer | Analyst | Operator | Admin |
 |---|---:|---:|---:|---:|
 | Dashboard / Reports | 查看 | 查看 | 查看 | 查看 |
 | Recommendations | 查看 | 创建/评论 | 批准 | 全部 |
 | Integrations | 查看状态 | 查看状态 | 重试同步 | 连接/断开 |
 | Costs | 查看 | 编辑建议 | 编辑 | 编辑 |
-| Members/Roles | 无 | 无 | 无 | 管理 |
+| Users/Roles | 无 | 无 | 无 | 管理 |
 | Action Runs | 查看 | 查看 | 执行已批准 | 全部 |
 
 ## 5. 视觉基线
